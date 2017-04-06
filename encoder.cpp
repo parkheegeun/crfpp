@@ -299,6 +299,7 @@ bool Encoder::learn(const char *templfile,
                     const char *trainfile,
                     const char *modelfile,
                     bool textmodelfile,
+                    bool javamodelfile,
                     size_t maxitr,
                     size_t freq,
                     double eta,
@@ -416,7 +417,7 @@ bool Encoder::learn(const char *templfile,
     delete *it;
   }
 
-  if (!feature_index.save(modelfile, textmodelfile)) {
+  if (!feature_index.save(modelfile, textmodelfile, javamodelfile)) {
     WHAT_ERROR(feature_index.what());
   }
 
@@ -439,6 +440,8 @@ const CRFPP::Option long_options[] = {
    "convert text model to binary model" },
   {"textmodel", 't', 0,       0,
    "build also text model file for debugging" },
+  {"javamodel", 'j', 0,       0,
+   "build model file for java" },
   {"algorithm",  'a', "CRF",   "(CRF|MIRA)", "select training algorithm" },
   {"thread", 'p',   "0",       "INT",
    "number of threads (default auto-detect)" },
@@ -469,6 +472,7 @@ int crfpp_learn(const Param &param) {
   const double         C              = param.get<float>("cost");
   const double         eta            = param.get<float>("eta");
   const bool           textmodel      = param.get<bool>("textmodel");
+  const bool           javamodel      = param.get<bool>("javamodel");
   const unsigned short thread         =
       CRFPP::getThreadSize(param.get<unsigned short>("thread"));
   const unsigned short shrinking_size
@@ -499,7 +503,7 @@ int crfpp_learn(const Param &param) {
     if (!encoder.learn(rest[0].c_str(),
                        rest[1].c_str(),
                        rest[2].c_str(),
-                       textmodel,
+                       textmodel, javamodel,
                        maxiter, freq, eta, C, thread, shrinking_size,
                        algorithm)) {
       std::cerr << encoder.what() << std::endl;

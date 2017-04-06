@@ -103,7 +103,7 @@ class EncoderFeatureIndex: public FeatureIndex {
  public:
   bool open(const char *template_filename,
             const char *model_filename);
-  bool save(const char *filename, bool emit_textmodelfile);
+  bool save(const char *filename, bool emit_textmodelfile, bool emit_javamodelfile);
   bool convert(const char *text_filename,
                const char *binary_filename);
   void shrink(size_t freq, Allocator *allocator);

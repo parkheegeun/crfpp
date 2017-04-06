@@ -370,12 +370,13 @@ bool EncoderFeatureIndex::convert(const char *text_filename,
 
   CHECK_FALSE(alpha.size() == maxid_) << " file is broken: "  << text_filename;
 
-  return save(binary_filename, false);
+  return save(binary_filename, false, false);
 }
 
 
 bool EncoderFeatureIndex::save(const char *filename,
-                               bool textmodelfile) {
+                               bool textmodelfile,
+                               bool javamodelfile) {
   std::vector<char *> key;
   std::vector<int>    val;
 
@@ -400,11 +401,13 @@ bool EncoderFeatureIndex::save(const char *filename,
     templ_str += '\0';
   }
 
+  unsigned int feature_map_size = 0;
   for (std::map<std::string, std::pair<int, unsigned int> >::iterator
            it = dic_.begin();
        it != dic_.end(); ++it) {
     key.push_back(const_cast<char *>(it->first.c_str()));
     val.push_back(it->second.first);
+	feature_map_size++;
   }
 
   Darts::DoubleArray da;
@@ -429,19 +432,50 @@ bool EncoderFeatureIndex::save(const char *filename,
     xsize_ = std::min(xsize_, max_xsize_);
   }
   bofs.write(reinterpret_cast<char *>(&xsize_), sizeof(xsize_));
+  
   unsigned int dsize = da.unit_size() * da.size();
-  bofs.write(reinterpret_cast<char *>(&dsize), sizeof(dsize));
+  if (!javamodelfile) {
+	  bofs.write(reinterpret_cast<char *>(&dsize), sizeof(dsize));
+  }
+  else {
+	  bofs.write(reinterpret_cast<char *>(&feature_map_size), sizeof(feature_map_size));
+  }
+
   unsigned int size = y_str.size();
   bofs.write(reinterpret_cast<char *>(&size),  sizeof(size));
   bofs.write(const_cast<char *>(y_str.data()), y_str.size());
   size = templ_str.size();
   bofs.write(reinterpret_cast<char *>(&size),  sizeof(size));
   bofs.write(const_cast<char *>(templ_str.data()), templ_str.size());
-  bofs.write(reinterpret_cast<const char *>(da.array()), dsize);
+  
+  if (!javamodelfile) {
+	  bofs.write(reinterpret_cast<const char *>(da.array()), dsize);
 
-  for (size_t i  = 0; i < maxid_; ++i) {
-    float alpha = static_cast<float>(alpha_[i]);
-    bofs.write(reinterpret_cast<char *>(&alpha), sizeof(alpha));
+	  for (size_t i = 0; i < maxid_; ++i) {
+		  float alpha = static_cast<float>(alpha_[i]);
+		  //std::cout << i << "\t" << sizeof(alpha) << "\t" << alpha << std::endl;
+		  bofs.write(reinterpret_cast<char *>(&alpha), sizeof(alpha));
+	  }
+  }
+  else {
+	  unsigned int feature_size = 0;
+	  std::string dic_str;
+	  for (std::map<std::string, std::pair<int, unsigned int> >::iterator
+			  it = dic_.begin();
+			  it != dic_.end(); ++it) {
+		  int id = it->second.first;
+		  bofs.write(reinterpret_cast<char *>(&id), sizeof(id));
+		  feature_size = it->first.size();
+		  bofs.write(reinterpret_cast<char *>(&feature_size), sizeof(feature_size));
+		  bofs.write(const_cast<char *>(it->first.c_str()), feature_size);
+		  //std::cout << id << "/" << sizeof(id) << " " << it->first << "/" << size << std::endl;
+	  }
+
+	  for (size_t i = 0; i < maxid_; ++i) {
+		  double alpha = static_cast<double>(alpha_[i]);
+		  //std::cout << i << "\t" << sizeof(alpha) << "\t" << alpha << std::endl;
+		  bofs.write(reinterpret_cast<char *>(&alpha), sizeof(alpha));
+	  }
   }
 
   bofs.close();
