@@ -1,6 +1,7 @@
 1. 개요 : 본 프로젝트는 기존의 CRF++로 만들어진 Binary model file을 C가 아닌 다른 언어로 작성된 프로그램에서 사용할 수 있도록 하기 위해 만들어진 것입니다.
 2. original CRF++ : https://github.com/taku910/crfpp
-3. 변경 내용  
-  3.1. -j option 추가 (2017.04.07) 
+3. Tookit 설명 : https://taku910.github.io/crfpp/
+4. 변경 내용  
+  4.1. -j option 추가 (2017.04.07) 
         crf_learn 명령어 실행 option으로 추가 
         해당 옵션 사용하여 실행 시, 기존 Binary model file을 대체하여 java에서 로딩 가능한 형태의 Binary model file이 생성 
