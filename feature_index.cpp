@@ -434,12 +434,7 @@ bool EncoderFeatureIndex::save(const char *filename,
   bofs.write(reinterpret_cast<char *>(&xsize_), sizeof(xsize_));
   
   unsigned int dsize = da.unit_size() * da.size();
-  if (!javamodelfile) {
-	  bofs.write(reinterpret_cast<char *>(&dsize), sizeof(dsize));
-  }
-  else {
-	  bofs.write(reinterpret_cast<char *>(&feature_map_size), sizeof(feature_map_size));
-  }
+  bofs.write(reinterpret_cast<char *>(&dsize), sizeof(dsize));
 
   unsigned int size = y_str.size();
   bofs.write(reinterpret_cast<char *>(&size),  sizeof(size));
@@ -447,39 +442,73 @@ bool EncoderFeatureIndex::save(const char *filename,
   size = templ_str.size();
   bofs.write(reinterpret_cast<char *>(&size),  sizeof(size));
   bofs.write(const_cast<char *>(templ_str.data()), templ_str.size());
-  
-  if (!javamodelfile) {
-	  bofs.write(reinterpret_cast<const char *>(da.array()), dsize);
 
-	  for (size_t i = 0; i < maxid_; ++i) {
-		  float alpha = static_cast<float>(alpha_[i]);
-		  //std::cout << i << "\t" << sizeof(alpha) << "\t" << alpha << std::endl;
-		  bofs.write(reinterpret_cast<char *>(&alpha), sizeof(alpha));
-	  }
-  }
-  else {
-	  unsigned int feature_size = 0;
-	  std::string dic_str;
-	  for (std::map<std::string, std::pair<int, unsigned int> >::iterator
-			  it = dic_.begin();
-			  it != dic_.end(); ++it) {
-		  int id = it->second.first;
-		  bofs.write(reinterpret_cast<char *>(&id), sizeof(id));
-		  feature_size = it->first.size();
-		  bofs.write(reinterpret_cast<char *>(&feature_size), sizeof(feature_size));
-		  bofs.write(const_cast<char *>(it->first.c_str()), feature_size);
-		  //std::cout << id << "/" << sizeof(id) << " " << it->first << "/" << size << std::endl;
-	  }
+  bofs.write(reinterpret_cast<const char *>(da.array()), dsize);
 
-	  for (size_t i = 0; i < maxid_; ++i) {
-		  double alpha = static_cast<double>(alpha_[i]);
-		  //std::cout << i << "\t" << sizeof(alpha) << "\t" << alpha << std::endl;
-		  bofs.write(reinterpret_cast<char *>(&alpha), sizeof(alpha));
-	  }
+  for (size_t i = 0; i < maxid_; ++i) {
+	float alpha = static_cast<float>(alpha_[i]);
+	//std::cout << i << "\t" << sizeof(alpha) << "\t" << alpha << std::endl;
+	bofs.write(reinterpret_cast<char *>(&alpha), sizeof(alpha));
   }
 
   bofs.close();
 
+  // javamodelfile generation
+  if (javamodelfile) {
+    std::string filenamej = filename;
+    filenamej += ".jbm";
+
+	std::ofstream jofs;
+	jofs.open(WPATH(filenamej.c_str()), OUTPUT_MODE);
+
+	CHECK_FALSE(jofs) << "open failed: " << filenamej;
+
+	unsigned int version_ = version;
+	jofs.write(reinterpret_cast<char *>(&version_), sizeof(unsigned int));
+
+	int type = 0;
+	jofs.write(reinterpret_cast<char *>(&type), sizeof(type));
+	jofs.write(reinterpret_cast<char *>(&cost_factor_), sizeof(cost_factor_));
+	jofs.write(reinterpret_cast<char *>(&maxid_), sizeof(maxid_));
+
+	if (max_xsize_ > 0) {
+	  xsize_ = std::min(xsize_, max_xsize_);
+	}
+	jofs.write(reinterpret_cast<char *>(&xsize_), sizeof(xsize_));
+
+	unsigned int dsize = da.unit_size() * da.size();
+	jofs.write(reinterpret_cast<char *>(&feature_map_size), sizeof(feature_map_size));
+
+	unsigned int size = y_str.size();
+	jofs.write(reinterpret_cast<char *>(&size),  sizeof(size));
+	jofs.write(const_cast<char *>(y_str.data()), y_str.size());
+	size = templ_str.size();
+	jofs.write(reinterpret_cast<char *>(&size),  sizeof(size));
+	jofs.write(const_cast<char *>(templ_str.data()), templ_str.size());
+
+	unsigned int feature_size = 0;
+	std::string dic_str;
+	for (std::map<std::string, std::pair<int, unsigned int> >::iterator
+		it = dic_.begin();
+		it != dic_.end(); ++it) {
+	  int id = it->second.first;
+	  jofs.write(reinterpret_cast<char *>(&id), sizeof(id));
+	  feature_size = it->first.size();
+	  jofs.write(reinterpret_cast<char *>(&feature_size), sizeof(feature_size));
+	  jofs.write(const_cast<char *>(it->first.c_str()), feature_size);
+	  //std::cout << id << "/" << sizeof(id) << " " << it->first << "/" << size << std::endl;
+	}
+
+	for (size_t i = 0; i < maxid_; ++i) {
+	  double alpha = static_cast<double>(alpha_[i]);
+	  //std::cout << i << "\t" << sizeof(alpha) << "\t" << alpha << std::endl;
+	  jofs.write(reinterpret_cast<char *>(&alpha), sizeof(alpha));
+	}
+
+	jofs.close();
+  }
+
+  // textmodelfile generation
   if (textmodelfile) {
     std::string filename2 = filename;
     filename2 += ".txt";
